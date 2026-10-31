@@ -1,5 +1,6 @@
 "use client";
 
+import SourceWorkspace from "@/app/SourceWorkspace";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -107,6 +108,7 @@ export default function NotebookPage() {
           </form>}
           {sources.length ? <ul className="sourceList">{sources.map(source => <li key={source.id} className="sourceItem"><FileText size={20}/><div><strong>{source.name}</strong><p>{(source.sizeBytes / 1024).toFixed(1)} KB · {source.status === "uploaded" ? "Awaiting processing" : source.status}</p></div></li>)}</ul> :
           <div className="empty"><FileText size={27}/><h3>No sources yet</h3><p>Upload a PDF, text or Markdown document to get started.</p></div>}
+          <SourceWorkspace key={`${user.uid}/${notebookId}`} uid={user.uid} notebookId={notebookId} title={notebook.title}/>
         </section>}
       {error && <p role="alert" className="error">{error}</p>}
       {message && <p role="status" className="success">{message}</p>}

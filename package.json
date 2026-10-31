@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/lib/*.test.mjs"
+    "test": "node --experimental-strip-types --test src/lib/*.test.mjs tests/*.test.ts"
   },
   "dependencies": {
     "next": "^15.5.0",

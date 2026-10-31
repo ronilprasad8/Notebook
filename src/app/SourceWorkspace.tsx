@@ -4,7 +4,7 @@ import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverT
 import { db } from '@/lib/firebase';
 import { exportSources, MAX_SOURCE_BYTES, prepareSource, searchSources, type Source } from '@/lib/sources';
 
-export default function SourceWorkspace({ uid, notebookId, title, onBack }: { uid: string; notebookId: string; title: string; onBack: () => void }) {
+export default function SourceWorkspace({ uid, notebookId, title }: { uid: string; notebookId: string; title: string }) {
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceTitle, setSourceTitle] = useState('');
   const [text, setText] = useState('');
@@ -15,7 +15,7 @@ export default function SourceWorkspace({ uid, notebookId, title, onBack }: { ui
   const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => {
     if (!db) return;
-    return onSnapshot(query(collection(db, 'users', uid, 'notebooks', notebookId, 'sources'), orderBy('createdAt', 'desc')), snapshot => {
+    return onSnapshot(query(collection(db, 'users', uid, 'notebooks', notebookId, 'textSources'), orderBy('createdAt', 'desc')), snapshot => {
       setSources(snapshot.docs.map(item => ({ id: item.id, title: String(item.data().title ?? ''), text: String(item.data().text ?? '') })));
       setLoading(false);
     }, () => { setLoading(false); setError('Sources could not be loaded. Check your connection and Firestore access rules.'); });
@@ -26,7 +26,7 @@ export default function SourceWorkspace({ uid, notebookId, title, onBack }: { ui
     setError(''); setBusy(true);
     try {
       const source = prepareSource(sourceTitle, text);
-      const saved = await addDoc(collection(db, 'users', uid, 'notebooks', notebookId, 'sources'), { ...source, createdAt: serverTimestamp() });
+      const saved = await addDoc(collection(db, 'users', uid, 'notebooks', notebookId, 'textSources'), { ...source, createdAt: serverTimestamp() });
       setSourceTitle(''); setText(''); setSelected(saved.id);
     } catch (error) { setError(error instanceof Error ? error.message : 'Could not save source.'); }
     finally { setBusy(false); }
@@ -45,7 +45,7 @@ export default function SourceWorkspace({ uid, notebookId, title, onBack }: { ui
   async function remove(source: Source) {
     if (!db || busy || !window.confirm(`Delete source "${source.title}"? This cannot be undone.`)) return;
     setBusy(true); setError('');
-    try { await deleteDoc(doc(db, 'users', uid, 'notebooks', notebookId, 'sources', source.id)); if (selected === source.id) setSelected(null); }
+    try { await deleteDoc(doc(db, 'users', uid, 'notebooks', notebookId, 'textSources', source.id)); if (selected === source.id) setSelected(null); }
     catch { setError('Could not delete source. Please try again.'); }
     finally { setBusy(false); }
   }
@@ -57,13 +57,12 @@ export default function SourceWorkspace({ uid, notebookId, title, onBack }: { ui
   const active = sources.find(source => source.id === selected);
   const results = searchSources(sources, search);
   return <section className="workspace">
-    <button className="textButton" onClick={onBack}>← All notebooks</button>
-    <div className="sectionHead"><h2>{title}</h2><button className="textButton" onClick={download} disabled={!sources.length || loading}>Export sources</button></div>
+    <div className="sectionHead"><h2>Text sources</h2><button className="textButton" onClick={download} disabled={!sources.length || loading}>Export sources</button></div>
     <p>Collect text and Markdown sources. Search your original material and read it here.</p>
     <form className="sourceForm" onSubmit={save}>
       <h3>Add a source</h3>
-      <label htmlFor="sourceFile">Import .txt or .md (up to 200 KB)</label>
-      <input id="sourceFile" type="file" accept=".txt,.md,text/plain,text/markdown" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void importFile(file); }}/>
+      <label htmlFor="textSourceFile">Import .txt or .md (up to 200 KB)</label>
+      <input id="textSourceFile" type="file" accept=".txt,.md,text/plain,text/markdown" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void importFile(file); }}/>
       <label htmlFor="sourceTitle">Source title</label><input id="sourceTitle" value={sourceTitle} maxLength={120} required disabled={busy} onChange={event => setSourceTitle(event.target.value)}/>
       <label htmlFor="sourceText">Source text</label><textarea id="sourceText" rows={8} value={text} required disabled={busy} onChange={event => setText(event.target.value)} placeholder="Paste your research notes or import a file above"/>
       <button className="primary" disabled={busy || !text.trim() || !sourceTitle.trim()}>{busy ? 'Working…' : 'Save source'}</button>

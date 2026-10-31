@@ -16,9 +16,9 @@ Use Node.js 22.18+ and run `npm ci`, `npm test`, `npm run lint`, `npm run typech
 GitHub Actions runs these checks on main/develop pushes and pull requests. Unit tests cover source normalization, UTF-8 size limits, invalid content, search, and export.
 
 ## Source storage and access
-Text sources live at `users/{uid}/notebooks/{notebookId}/sources/{sourceId}` in Firestore. Deploy the repository's rules before testing the source workspace; notebook-only rules do not grant access to subcollections. With an authenticated Firebase CLI, run `firebase deploy --only firestore:rules --project notebook-a737a`.
+Text sources live at `users/{uid}/notebooks/{notebookId}/textSources/{sourceId}` in Firestore. Deploy the repository's rules before testing the source workspace; notebook-only rules do not grant access to subcollections. With an authenticated Firebase CLI, run `firebase deploy --only firestore:rules --project notebook-a737a`.
 
-Sources are immutable after creation and can be deleted only by their owner. Creation requires an existing notebook, bounded title/text fields, and a server timestamp. HTML and Markdown are displayed as plain text, never executed. The client enforces a 200,000-byte UTF-8 limit; rules also cap text length at 200,000 characters. There is no PDF extraction, semantic search, AI answering, or citation generation in this batch.
+Sources are immutable after creation and can be deleted only by their owner. Creation requires an existing notebook, bounded title/text fields, and a server timestamp. HTML and Markdown are displayed as plain text, never executed. The client enforces a 200,000-byte UTF-8 limit; rules also cap text length at 200,000 characters. The existing Storage upload flow remains separate under `sources`; this text workspace does not change its metadata schema. There is no PDF extraction, semantic search, AI answering, or citation generation in this batch.
 
 Before release, verify owner and non-owner access with the Firebase rules playground or emulator, then sign in and test create notebook → save source → reload → search → read → export → delete. Test two accounts to check isolation. A successful Vercel build alone does not prove authenticated Firestore operations work.
 

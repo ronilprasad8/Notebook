@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{userId}/notebooks/{notebookId}/sources/{filename} {
+      function owner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      allow read, delete: if owner();
+      allow create: if owner()
+        && filename.matches('[A-Za-z0-9_-]+\\.(pdf|txt|md)')
+        && request.resource.size > 0
+        && request.resource.size <= 10485760
+        && request.resource.contentType in ['application/pdf', 'text/plain', 'text/markdown'];
+      allow update: if false;
+    }
+  }
+}

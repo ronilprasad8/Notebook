@@ -1,9 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    function validTitle(title) {
+      return title is string && title.size() > 0 && title.size() <= 120;
+    }
     match /users/{userId}/notebooks/{notebookId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow get, list: if signedInAs(userId);
+      allow create: if signedInAs(userId)
+        && request.resource.data.keys().hasOnly(['title', 'createdAt'])
+        && validTitle(request.resource.data.title)
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedInAs(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title'])
+        && validTitle(request.resource.data.title);
+      allow delete: if signedInAs(userId);
+
       match /sources/{sourceId} {
+        allow get, list: if signedInAs(userId);
+        allow create: if signedInAs(userId)
+          && exists(/databases/$(database)/documents/users/$(userId)/notebooks/$(notebookId))
+          && request.resource.data.keys().hasOnly(['name', 'contentType', 'sizeBytes', 'storagePath', 'status', 'createdAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 255
+          && request.resource.data.contentType in ['application/pdf', 'text/plain', 'text/markdown']
+          && request.resource.data.sizeBytes is int
+          && request.resource.data.sizeBytes > 0
+          && request.resource.data.sizeBytes <= 10485760
+          && request.resource.data.storagePath is string
+          && request.resource.data.storagePath.matches('users/' + userId + '/notebooks/' + notebookId + '/sources/' + sourceId + '\\.(pdf|txt|md)')
+          && request.resource.data.status == 'uploaded'
+          && request.resource.data.createdAt == request.time;
+        // Only a trusted backend may update processing status and extracted text.
+        allow update: if false;
+        allow delete: if signedInAs(userId);
+      }
+      match /textSources/{sourceId} {
         function owner() {
           return request.auth != null && request.auth.uid == userId;
         }
